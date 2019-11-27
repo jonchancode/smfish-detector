@@ -1,7 +1,8 @@
 function processImage(img_path, save_intermediate_images)
 % Processes one image
 
-%% Image processing to extract ROIs
+%% General ellipse detection
+
 % Load the image and convert to single precision floating point image
 byte_img = imread(img_path);
 single_img = im2single(byte_img);
@@ -15,20 +16,65 @@ single_img = im2single(byte_img);
 
 % Run DoH to detect strong blobs and PCA to get a coarse estimate of an
 % ellipse outlining the cell
-frames = vl_covdet(single_img, 'method', 'Hessian');
-keypoint_positions = frames(1:2, :)';  % First 2 rows
-[principal_components, keypoints_covariance] = principalComponentAnalysis(keypoint_positions);
-keypoint_positions_mean = mean(keypoint_positions);
+covdet_frames = vl_covdet(single_img, 'method', 'Hessian');
+keypoints = covdet_frames(1:2, :)';  % First 2 rows
+[coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
+keypoint_mean = mean(keypoints);
 
-% Run MSER to flood fill the regions
-[region_seeds, ~] = vl_mser(byte_img);
-
-% TODO
 % Detect outlier blobs according to their distance from the ellipse. Throw
 % away any detections beyond a certain threshold.
 % Note, we scale the threshold based on the axes of the ellipse (i.e.
 % threshold is greater on the long axis).
+outlier_indices = [];
+for i = 1:size(keypoints, 1)
+   keypoint = keypoints(i,:);
+   
+   % Compute a ray from the center of the ellipse to the given keypoint
+   keypoint_ray = keypoint - keypoint_mean;
+   
+   % Compute the angle between the ray and the biggest component
+   % PCA always computes components ordered from largest to smallest, so
+   % first component is the largest one.
+   largest_component = coarse_principal_components(:,1);
+   angle_in_radians = acos(keypoint_ray * largest_component(:,1) / (norm(keypoint_ray) * norm(largest_component)));
+   
+   % Compute the length of the vector from the center of the ellipse to the
+   % edge of the ellipse given this angle.
+   % Let major/minor axes, (a, b), be the length of the principal
+   % components.
+   % TODO: Bug! Something is wrong with the principal component lengths.
+   % They're a few orders of magnitude bigger than they should be...
+   a = sqrt(norm(coarse_principal_components(:,1)));
+   b = sqrt(norm(coarse_principal_components(:,2)));
+   % TODO: Need to verify whether this ray to ellipse edge math is right...
+   ray_to_edge_of_ellipse = [a * cos(angle_in_radians), b * sin(angle_in_radians)];
+   ray_to_edge_of_ellipse_length = norm(ray_to_edge_of_ellipse);
+   
+   % Consider the keypoint an outlier if it exceeds some factor of the
+   % ray_to_edge_of_ellipse.
+   threshold_factor = 2.0;
+   
+   keypoint_ray_length = norm(keypoint_ray);
+   if keypoint_ray_length > threshold_factor * ray_to_edge_of_ellipse_length
+       outlier_indices = [outlier_indices, i];
+   end
+end
 
+% Remove the outliers
+inlier_keypoints = keypoints;
+inlier_keypoints(outlier_indices, :) = [];
+
+% Recompute ellipse with inliers only
+[inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
+inlier_keypoints_mean = mean(inlier_keypoints);
+
+%% Flood filling
+
+% Run MSER to flood fill the regions
+[region_seeds, ~] = vl_mser(byte_img);
+
+% TODO: Only use regions overlapping with the inlier ellipse, and fit a
+% convex hull using convexhull over the pixels in those selected regions.
 
 %% Visualizations of extracted ROIs
 
@@ -78,20 +124,22 @@ if visualize
     % Show principal components
     show_principal_components = false;
     if show_principal_components
-        mean_matrix = repmat(keypoint_positions_mean, 2, 1);
-        quiver(ax1, mean_matrix(:,1), mean_matrix(:,2), principal_components(:,1) / 20, principal_components(:,2) / 20, 'r');
+        mean_matrix = repmat(keypoint_mean, 2, 1);
+        quiver(ax1, mean_matrix(:,1), mean_matrix(:,2), coarse_principal_components(:,1) / 20, coarse_principal_components(:,2) / 20, 'y');
     end
     
     % Plot ellipse defined by the principal components
     show_ellipse = true;
     if show_ellipse
-        plotCovarianceEllipse(ax1, keypoint_positions_mean, keypoints_covariance, 0.9);
+        plotCovarianceEllipse(ax1, keypoint_mean, coarse_keypoints_covariance, 0.9, 'r');
+        plotCovarianceEllipse(ax1, inlier_keypoints_mean, inlier_keypoints_covariance, 0.9, 'g');
     end
     
     % Show keypoints
-    show_keypoints = false;
+    show_keypoints = true;
     if show_keypoints
-        scatter(ax1, keypoint_positions(:,1), keypoint_positions(:,2), 'g');
+        scatter(ax1, keypoints(:,1), keypoints(:,2), 'r');
+        scatter(ax1, inlier_keypoints(:,1), inlier_keypoints(:,2), 'g');
     end
     
     % Show MSER regions
@@ -128,7 +176,7 @@ if visualize
         set(figure_handle, 'color', 'y', 'linewidth', 3);
         
         % Plot ellipse
-        plotCovarianceEllipse(ax2, keypoint_positions_mean, keypoints_covariance, 0.9);
+        plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, 0.9, 'g');
         
         hold(ax2, 'off');
         

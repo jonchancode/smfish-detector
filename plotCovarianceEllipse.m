@@ -1,4 +1,4 @@
-function plotCovarianceEllipse(ax, mu, Sigma, p)
+function plotCovarianceEllipse(ax, mu, Sigma, p, color)
 
     s = -2 * log(1 - p);
 
@@ -7,6 +7,6 @@ function plotCovarianceEllipse(ax, mu, Sigma, p)
     t = linspace(0, 2 * pi);
     a = (V * sqrt(D)) * [cos(t(:))'; sin(t(:))'];
 
-    plot(ax, a(1, :) + mu(1), a(2, :) + mu(2));
+    plot(ax, a(1, :) + mu(1), a(2, :) + mu(2), 'color', color);
     
 end

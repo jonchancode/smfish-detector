@@ -20,7 +20,7 @@ for i = 1:size(X, 1)
 end
 
 % Run PCA
-components = principalComponentAnalysis(X)
+[components, covariance] = principalComponentAnalysis(X)
 
 % Visualize
 visualize = true;
