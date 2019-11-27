@@ -1,0 +1,56 @@
+# General
+*.tmp
+
+# Build directories
+bin/
+obj/
+ipch/
+Debug/
+Release/
+**/packages/
+out/*
+
+# Visual Studio
+**/.vs
+*.suo
+*.user
+*.opendb
+*.db
+*.sdf
+
+# VSCode
+**/.vscode
+
+# Meld
+*.orig
+
+# Matlab
+*.asv
+
+# Images
+*.png
+*.jpeg
+*.jpg
+*.exr
+*.bmp
+
+# Binary files
+*.dll
+*.exe
+*.bin
+*.lib
+*.pfx
+*.pdb
+*.log
+*.tlog
+*.obj
+*.pch
+*.idb
+*.aps
+*.dbmdl
+*.i
+*.nupkg
+*.pyc
+*.ipdb
+*.iobj
+*.zip
