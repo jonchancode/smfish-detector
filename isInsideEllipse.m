@@ -1,32 +1,47 @@
-function is_inside = isInsideEllipse(xy, principal_components, ellipse_center)
+function is_inside = isInsideEllipse(xy, center, covariance, probability)
+% This function checks whether a point, xy, is within the ellipse defined
+% by (covariance, center, and probability).
+%
+% xy = 2d point we're interested in
+% center = 2d center of the ellipse
+% covariance = Covariance defining the ellipse
+% probability = Assuming the ellipse is showing an outline of a Gaussian
+% with the provided covariance, probability sets what factor of this
+% covariance we're looking in. In simpler terms, probabily effectively
+% scales the ellipse to be larger or smaller.
+%
+% The probability is defined as assuming the covariance is describing a
+% Gaussian ellipse.
+% Thus, the mathematical definition of "inside" here means whether the xy 
+% point is within probabilty % of an ellipse defined by a gaussian with 
+% the provided covariance.
 
-% Compute a ray from the center of the ellipse to the given keypoint
-xy_ray = xy - ellipse_center;
 
-% Compute the angle between the ray and the biggest component
-% PCA always computes components ordered from largest to smallest, so
-% first component is the largest one.
-largest_component = principal_components(:,1);
-angle_in_radians = acos(xy_ray * largest_component(:,1) / (norm(xy_ray) * norm(largest_component)));
+% TODO: We're just doing it this way to match how the
+% "plotCovarianceEllipse" code works. We should simplify this by removing
+% the concept of "probability".
 
-% Compute the length of the vector from the center of the ellipse to the
-% edge of the ellipse given this angle.
-% Let major/minor axes, (a, b), be the length of the principal
-% components.
-% TODO: Bug! Something is wrong with the principal component lengths.
-% They're a few orders of magnitude bigger than they should be...
-a = sqrt(norm(principal_components(:,1)));
-b = sqrt(norm(principal_components(:,2)));
-% TODO: Need to verify whether this ray to ellipse edge math is right...
-ray_to_edge_of_ellipse = [a * cos(angle_in_radians), b * sin(angle_in_radians)];
-ray_to_edge_of_ellipse_length = norm(ray_to_edge_of_ellipse);
+% Scale the variance according to the probability we desire
+variance_scale = -2 * log(1 - probability);
 
-% Consider the keypoint an outlier if it exceeds some factor of the
-% ray_to_edge_of_ellipse.
-threshold_factor = 1.0;
+[evectors, evalues] = eig(covariance * variance_scale);
 
-% Check if the xy_ray length exceeds the bounds of the ellipse
-xy_ray_length = norm(xy_ray);
-is_inside = (xy_ray_length > threshold_factor * ray_to_edge_of_ellipse_length);
+xy_centered = xy - center;
+
+xy_centered_rotated = evectors * xy_centered';
+
+% The boundary of an ellipse is defined x^2/a^2 + y^2/b^2 = 1 where (a, b)
+% define the major and minor axes of the ellipse, and (x, y) is any point.
+% Thus, when (x, y) is plugged in and is less than 1, then (x, y) is inside
+% the boundary.
+
+% Retrieve a^2 and b^2 from the eigen values
+a2 = evalues(1, 1);
+b2 = evalues(2, 2);
+
+x = xy_centered_rotated(1);
+y = xy_centered_rotated(2);
+
+is_inside = (((x^2 / a2) + (y^2 / b2)) <= 1);
 
 end

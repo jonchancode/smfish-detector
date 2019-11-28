@@ -19,43 +19,21 @@ single_img = im2single(byte_img);
 covdet_frames = vl_covdet(single_img, 'method', 'Hessian');
 keypoints = covdet_frames(1:2, :)';  % First 2 rows
 [coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
+ellipse_probability = 0.9; % TODO: Remove this in the future.
 keypoint_mean = mean(keypoints);
 
 % Detect outlier blobs according to their distance from the ellipse. Throw
 % away any detections beyond a certain threshold.
-% Note, we scale the threshold based on the axes of the ellipse (i.e.
-% threshold is greater on the long axis).
 outlier_indices = [];
 for i = 1:size(keypoints, 1)
    keypoint = keypoints(i,:);
    
-   % Compute a ray from the center of the ellipse to the given keypoint
-   keypoint_ray = keypoint - keypoint_mean;
+   % Consider the keypoint an inlier if it's inside a slightly larger
+   % ellipse
+   threshold_probability = ellipse_probability + 0.02;
+   is_inside_inlier_ellipse = isInsideEllipse(keypoint, keypoint_mean, coarse_keypoints_covariance, threshold_probability);
    
-   % Compute the angle between the ray and the biggest component
-   % PCA always computes components ordered from largest to smallest, so
-   % first component is the largest one.
-   largest_component = coarse_principal_components(:,1);
-   angle_in_radians = acos(keypoint_ray * largest_component(:,1) / (norm(keypoint_ray) * norm(largest_component)));
-   
-   % Compute the length of the vector from the center of the ellipse to the
-   % edge of the ellipse given this angle.
-   % Let major/minor axes, (a, b), be the length of the principal
-   % components.
-   % TODO: Bug! Something is wrong with the principal component lengths.
-   % They're a few orders of magnitude bigger than they should be...
-   a = sqrt(norm(coarse_principal_components(:,1)));
-   b = sqrt(norm(coarse_principal_components(:,2)));
-   % TODO: Need to verify whether this ray to ellipse edge math is right...
-   ray_to_edge_of_ellipse = [a * cos(angle_in_radians), b * sin(angle_in_radians)];
-   ray_to_edge_of_ellipse_length = norm(ray_to_edge_of_ellipse);
-   
-   % Consider the keypoint an outlier if it exceeds some factor of the
-   % ray_to_edge_of_ellipse.
-   threshold_factor = 2.0;
-   
-   keypoint_ray_length = norm(keypoint_ray);
-   if keypoint_ray_length > threshold_factor * ray_to_edge_of_ellipse_length
+   if ~is_inside_inlier_ellipse
        outlier_indices = [outlier_indices, i];
    end
 end
@@ -131,8 +109,8 @@ if visualize
     % Plot ellipse defined by the principal components
     show_ellipse = true;
     if show_ellipse
-        plotCovarianceEllipse(ax1, keypoint_mean, coarse_keypoints_covariance, 0.9, 'r');
-        plotCovarianceEllipse(ax1, inlier_keypoints_mean, inlier_keypoints_covariance, 0.9, 'g');
+        plotCovarianceEllipse(ax1, keypoint_mean, coarse_keypoints_covariance, ellipse_probability, 'r');
+        plotCovarianceEllipse(ax1, inlier_keypoints_mean, inlier_keypoints_covariance, ellipse_probability, 'g');
     end
     
     % Show keypoints
@@ -176,7 +154,7 @@ if visualize
         set(figure_handle, 'color', 'y', 'linewidth', 3);
         
         % Plot ellipse
-        plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, 0.9, 'g');
+        plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, ellipse_probability, 'g');
         
         hold(ax2, 'off');
         
