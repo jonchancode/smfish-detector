@@ -18,8 +18,8 @@ single_img = im2single(byte_img);
 % ellipse outlining the cell
 covdet_frames = vl_covdet(single_img, 'method', 'Hessian');
 keypoints = covdet_frames(1:2, :)';  % First 2 rows
-[coarse_principal_components, coarse_keypoints_covariance, variance_explained] = principalComponentAnalysis(keypoints);
-ellipse_probability = 0.9; % TODO: Remove this in the future.
+[coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
+coarse_ellipse_probability = 0.9; % TODO: Remove this in the future.
 keypoint_mean = mean(keypoints);
 
 % Detect outlier blobs according to their distance from the ellipse. Throw
@@ -30,7 +30,7 @@ for i = 1:size(keypoints, 1)
    
    % Consider the keypoint an inlier if it's inside a slightly larger
    % ellipse
-   threshold_probability = ellipse_probability + 0.02;
+   threshold_probability = coarse_ellipse_probability + 0.05;
    is_inside_inlier_ellipse = isInsideEllipse(keypoint, keypoint_mean, coarse_keypoints_covariance, threshold_probability);
    
    if ~is_inside_inlier_ellipse
@@ -45,6 +45,7 @@ inlier_keypoints(outlier_indices, :) = [];
 % Recompute ellipse with inliers only
 [inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
 inlier_keypoints_mean = mean(inlier_keypoints);
+inlier_ellipse_probability = 0.95;
 
 %% Flood filling
 
@@ -109,8 +110,8 @@ if visualize
     % Plot ellipse defined by the principal components
     show_ellipse = true;
     if show_ellipse
-        plotCovarianceEllipse(ax1, keypoint_mean, coarse_keypoints_covariance, ellipse_probability, 'r');
-        plotCovarianceEllipse(ax1, inlier_keypoints_mean, inlier_keypoints_covariance, ellipse_probability, 'g');
+        plotCovarianceEllipse(ax1, keypoint_mean, coarse_keypoints_covariance, coarse_ellipse_probability, 'r');
+        plotCovarianceEllipse(ax1, inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability, 'g');
     end
     
     % Show keypoints
@@ -154,7 +155,7 @@ if visualize
         set(figure_handle, 'color', 'y', 'linewidth', 3);
         
         % Plot ellipse
-        plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, ellipse_probability, 'g');
+        plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability, 'g');
         
         hold(ax2, 'off');
         
