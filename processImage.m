@@ -18,7 +18,7 @@ single_img = im2single(byte_img);
 % ellipse outlining the cell
 covdet_frames = vl_covdet(single_img, 'method', 'Hessian');
 keypoints = covdet_frames(1:2, :)';  % First 2 rows
-[coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
+[coarse_principal_components, coarse_keypoints_covariance, variance_explained] = principalComponentAnalysis(keypoints);
 ellipse_probability = 0.9; % TODO: Remove this in the future.
 keypoint_mean = mean(keypoints);
 
@@ -103,7 +103,7 @@ if visualize
     show_principal_components = false;
     if show_principal_components
         mean_matrix = repmat(keypoint_mean, 2, 1);
-        quiver(ax1, mean_matrix(:,1), mean_matrix(:,2), coarse_principal_components(:,1) / 20, coarse_principal_components(:,2) / 20, 'y');
+        quiver(ax1, mean_matrix(:,1), mean_matrix(:,2), coarse_principal_components(:,1), coarse_principal_components(:,2), 'y');
     end
     
     % Plot ellipse defined by the principal components
