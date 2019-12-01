@@ -33,8 +33,8 @@ if visualize
     
     scatter(X(:,1), X(:,2));
     
-    min_val = min(min(X));
-    max_val = max(max(X));
+    min_val = min(X(:));
+    max_val = max(X(:));
     limits = [min_val - 2, max_val + 2];
     xlim(limits);
     ylim(limits);

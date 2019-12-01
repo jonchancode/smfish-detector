@@ -144,15 +144,83 @@ if visualize
         %
         % We use the contour function to display a countour map
         % representing the region boundaries.
-        num_regions_for_pixel = zeros(size(byte_img));
-        for x = region_seeds'
-            s = vl_erfill(byte_img, x);
-            num_regions_for_pixel(s) = num_regions_for_pixel(s) + 1;
+        num_regions_per_pixel = zeros(size(byte_img));
+        indices_of_inlier_region_pixels = containers.Map('KeyType', 'int32', 'ValueType', 'logical');
+        xy_of_inlier_region_pixels = [];
+        for region_seed = region_seeds'
+            % Flood fill the region given by the seed
+            indices_of_pixels_in_filled_region = vl_erfill(byte_img, region_seed);
+            
+            % Increment the num_regions_per_pixel to represent that this
+            % set of pixels belongs to one additional region.
+            num_regions_per_pixel(indices_of_pixels_in_filled_region) = num_regions_per_pixel(indices_of_pixels_in_filled_region) + 1;
+            
+            % Figure out if any pixel in this region is inside the inlier
+            % ellipse
+            is_inside_inlier_ellipse = false;
+            for idx = indices_of_pixels_in_filled_region'
+                
+                % Check if we've already marked this pixel as an inlier
+                % region during the evaluation of a previous, overlapping
+                % region.
+                if indices_of_inlier_region_pixels.isKey(idx)
+                    % The current region is connected to a pixel that is an
+                    % inlier region. Thus, this region must be an inlier
+                    % region.
+                    % Exit this loop.
+                    is_inside_inlier_ellipse = true;
+                    break;
+                end
+                
+                % Otherwise, check if this pixel is inside the inlier
+                % ellipse.
+                [row, col] = ind2sub(size(byte_img), idx);
+                if isInsideEllipse([col row], inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability)
+                    is_inside_inlier_ellipse = true;
+                    break;
+                end
+            end
+            
+            if is_inside_inlier_ellipse
+                % Add all the pixels in this region to our list
+                for idx = indices_of_pixels_in_filled_region'
+                    
+                    if indices_of_inlier_region_pixels.isKey(idx)
+                        % Skip if we've already recorded this pixel
+                        continue;
+                    end
+                    
+                    % Add the xy position of the pixel
+                    [row, col] = ind2sub(size(byte_img), idx);
+                    xy_of_inlier_region_pixels = [xy_of_inlier_region_pixels; [col row];];
+                    
+                    % Mark that we've seen this pixel now
+                    indices_of_inlier_region_pixels(idx) = true;
+                end
+            end
         end
+        
+        % Plot the convex hull of the inlier pixel regions
+        hull_pts = convhull(double(xy_of_inlier_region_pixels));
+        plot(ax1, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
+        plot(ax2, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
 
         % Plot the contours
-        [c, figure_handle] = contour(ax2, num_regions_for_pixel, (0:max(num_regions_for_pixel(:))) + .5);
-        set(figure_handle, 'color', 'y', 'linewidth', 3);
+        show_contours = true;
+        if show_contours
+            [~, figure_handle] = contour(ax2, num_regions_per_pixel, (0:max(num_regions_per_pixel(:))) + .5);
+            set(figure_handle, 'color', 'y', 'linewidth', 3);
+        end
+        
+        % Get the (x,y) values of the regions inside the ellipse
+        
+        for row = 1:size(num_regions_per_pixel, 1)
+            for col = 1:size(num_regions_per_pixel, 2)
+                if isInsideEllipse([col row], inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability)
+                    
+                end
+            end
+        end
         
         % Plot ellipse
         plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability, 'g');
