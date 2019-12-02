@@ -7,7 +7,7 @@ img_dir_path = 'images';
 img_files = dir(img_dir_path);
 
 % Whether or not to save the intermediate images
-save_intermediate_images = false;
+save_intermediate_images = true;
 
 % Loop through all the images and processImage
 % Start at 3 because 1 and 2 are '.' and '..'

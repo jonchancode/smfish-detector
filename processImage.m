@@ -108,21 +108,25 @@ if visualize
     end
     
     % Plot ellipse defined by the principal components
-    show_ellipse = true;
-    if show_ellipse
+    show_coarse_ellipse = false;
+    if show_coarse_ellipse
         plotCovarianceEllipse(ax1, keypoint_mean, coarse_keypoints_covariance, coarse_ellipse_probability, 'r');
+    end
+    
+    show_inlier_ellipse = true;
+    if show_inlier_ellipse
         plotCovarianceEllipse(ax1, inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability, 'g');
     end
     
     % Show keypoints
-    show_keypoints = true;
+    show_keypoints = false;
     if show_keypoints
         scatter(ax1, keypoints(:,1), keypoints(:,2), 'r');
         scatter(ax1, inlier_keypoints(:,1), inlier_keypoints(:,2), 'g');
     end
     
     % Show MSER regions
-    show_mser_regions = true;
+    show_mser_regions = false;
     if show_mser_regions
         
         % Draw on figure 2
@@ -134,6 +138,8 @@ if visualize
         
         % Show the image
         imshow(byte_img);
+        
+        % TODO: Move the computational parts out of the viz section
         
         % Computes a look-up table image, num_regions_for_pixel, where each
         % pixel of this image is an integer representing how many
@@ -201,29 +207,24 @@ if visualize
         end
         
         % Plot the convex hull of the inlier pixel regions
-        hull_pts = convhull(double(xy_of_inlier_region_pixels));
-        plot(ax1, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
-        plot(ax2, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
+        show_convex_hull = true;
+        if show_convex_hull
+            hull_pts = convhull(double(xy_of_inlier_region_pixels));
+            plot(ax1, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
+            plot(ax2, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
+        end
 
         % Plot the contours
-        show_contours = true;
+        show_contours = false;
         if show_contours
             [~, figure_handle] = contour(ax2, num_regions_per_pixel, (0:max(num_regions_per_pixel(:))) + .5);
             set(figure_handle, 'color', 'y', 'linewidth', 3);
         end
         
-        % Get the (x,y) values of the regions inside the ellipse
-        
-        for row = 1:size(num_regions_per_pixel, 1)
-            for col = 1:size(num_regions_per_pixel, 2)
-                if isInsideEllipse([col row], inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability)
-                    
-                end
-            end
+        % Plot inlier ellipse
+        if show_inlier_ellipse
+            plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability, 'g');
         end
-        
-        % Plot ellipse
-        plotCovarianceEllipse(ax2, inlier_keypoints_mean, inlier_keypoints_covariance, inlier_ellipse_probability, 'g');
         
         hold(ax2, 'off');
         
