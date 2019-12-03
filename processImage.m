@@ -21,7 +21,7 @@ keypoints = covdet_frames(1:2, :)';  % First 2 rows
 keypoint_mean = mean(keypoints);
 [coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
 % Scale the principal components to 2 standard deviations
-num_stddev_for_coarse_pca = 2.1460;
+num_stddev_for_coarse_pca = 2.1;
 coarse_principal_components = num_stddev_for_coarse_pca * coarse_principal_components;
 
 % Detect outlier blobs according to their distance from the ellipse. Throw
@@ -32,7 +32,7 @@ for i = 1:size(keypoints, 1)
     
     % Consider the keypoint an inlier if it's inside a slightly larger
     % ellipse
-    threshold_scale = 1.1406;
+    threshold_scale = 1.1;
     is_inside_inlier_ellipse = isInside2dPCAEllipse(keypoint, keypoint_mean, threshold_scale * coarse_principal_components);
     
     if ~is_inside_inlier_ellipse
@@ -47,7 +47,7 @@ inlier_keypoints(outlier_indices, :) = [];
 % Recompute ellipse with inliers only
 inlier_keypoints_mean = mean(inlier_keypoints);
 [inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
-num_stddev_for_inlier_pca = 2.4477;
+num_stddev_for_inlier_pca = 2.4;
 inlier_principal_components = num_stddev_for_inlier_pca * inlier_principal_components;
 
 %% Flood filling
