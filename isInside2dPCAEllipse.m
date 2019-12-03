@@ -30,7 +30,6 @@ xy_centered_rotated = rotation * xy_centered';
 x = xy_centered_rotated(1);
 y = xy_centered_rotated(2);
 
-
 is_inside = (((x^2 / a^2) + (y^2 / b^2)) <= 1);
 
 end
