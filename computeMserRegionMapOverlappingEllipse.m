@@ -1,4 +1,4 @@
-function [region_map, pixels_of_overlapping_regions] = computeMserRegionMapOverlappingEllipse(byte_img, ellipse_center, principal_components)
+function [region_map, pixels_of_overlapping_regions] = computeMserRegionMapOverlappingEllipse(byte_img, ellipse_center, principal_components, pca_covariance)
 % Computes a new 'image' the same size as byte_img where each pixel is an
 % integer representing how many regions it belongs to.
 %
@@ -52,11 +52,19 @@ for region_seed = region_seeds'
         % This is a pixel we've never seen before. Check if it's inside the
         % ellipse.
         [row, col] = ind2sub(size(byte_img), idx);
+        if col < 179 && col > 148
+            disp('here');
+        end
         
         if isInside2dPCAEllipse(...
                 [col row], ...
                 ellipse_center, ...
                 principal_components)
+%         if isInsideEllipse(...
+%                 [col row], ...
+%                 ellipse_center, ...
+%                 pca_covariance, ...
+%                 0.9561)
             
             % This pixel is inside the ellipse. Thus this region must
             % overlap.
