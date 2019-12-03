@@ -1,14 +1,22 @@
-function [region_map, pixels_of_overlapping_regions] = computeMserRegionMapOverlappingEllipse(byte_img, ellipse_center, principal_components, pca_covariance)
-% Computes a new 'image' the same size as byte_img where each pixel is an
-% integer representing how many regions it belongs to.
+function [region_map, pixels_of_connected_regions] = computeMserAndFindRegionsConnectedToEllipse(byte_img, ellipse_center, principal_components)
+% Returns:
 %
-% Can be thought of like an elevation map, where the integer of each pixel
-% is the height at that position. The "higher" the pixel, the the closer to
-% the peak/center of the region you are.
+% region_map:
+%   A new 'image' the same size as byte_img where each pixel is an integer 
+%   representing how many regions it belongs to.
+%
+%   Can be thought of like an elevation map, where the integer of each pixel
+%   is the height at that position. The "higher" the pixel, the the closer to
+%   the peak/center of the region you are.
+%
+% pixels_of_connected_regions:
+%   The pixels (x,y positions) of the regions that are connected to the
+%   ellipse. Is an Nx2 matrix, where each row is an (x,y) position.
+%
 
 % Zero initialize output variables
 region_map = zeros(size(byte_img));
-pixels_of_overlapping_regions = [];
+pixels_of_connected_regions = [];
 
 % Run MSER to flood fill the regions. Each region_seed is the index of a
 % pixel that belongs to a region.
@@ -77,7 +85,7 @@ for region_seed = region_seeds'
             
             % Add the xy position of the pixel
             [row, col] = ind2sub(size(byte_img), idx);
-            pixels_of_overlapping_regions = [pixels_of_overlapping_regions; [col row];];
+            pixels_of_connected_regions = [pixels_of_connected_regions; [col row];];
             
             % Mark that we've seen this pixel now
             indices_of_inlier_region_pixels(idx) = true;
