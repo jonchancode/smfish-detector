@@ -7,7 +7,7 @@ img_dir_path = 'images';
 img_files = dir(img_dir_path);
 
 % Whether or not to save the intermediate images
-save_intermediate_images = true;
+save_intermediate_images = false;
 if save_intermediate_images
     mkdir 'out'
 end

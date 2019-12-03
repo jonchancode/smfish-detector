@@ -1,18 +1,20 @@
 function processImage(img_path, save_intermediate_images)
 % Processes one image
 
-%% Coarse ellipse detection
+%% Image loading
 
 % Load the image and convert to single precision floating point image
 byte_img = imread(img_path);
 single_img = im2single(byte_img);
+
+%% Coarse ellipse detection
 
 % Run DoH to detect strong blobs and PCA to get a coarse estimate of an
 % ellipse outlining the cell
 covdet_frames = vl_covdet(single_img, 'method', 'Hessian');
 keypoints = covdet_frames(1:2, :)';  % First 2 rows
 keypoint_mean = mean(keypoints);
-[coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
+[coarse_principal_components, ~] = principalComponentAnalysis(keypoints);
 
 %% Remove outlier detections
 
@@ -23,29 +25,16 @@ num_stddev_for_coarse_pca = 2.2;
 coarse_principal_components = num_stddev_for_coarse_pca * coarse_principal_components;
 
 % Consider a keypoint outside the ellipse an outlier
-outlier_indices = [];
-for i = 1:size(keypoints, 1)
-    keypoint = keypoints(i,:);
-
-    is_inside_inlier_ellipse = isInside2dPCAEllipse(...
-        keypoint, ...
-        keypoint_mean, ...
-        coarse_principal_components);
-    
-    if ~is_inside_inlier_ellipse
-        outlier_indices = [outlier_indices, i];
-    end
-end
-
-% Create a new list of keypoints without the outliers
-inlier_keypoints = keypoints;
-inlier_keypoints(outlier_indices, :) = [];
+inlier_keypoints = filterKeypointsOutsideEllipse(...
+    keypoints, ...
+    keypoint_mean, ...
+    coarse_principal_components);
 
 %% ROI refinement with inliers only
 
 % Recompute an ellipse with inliers only
 inlier_keypoints_mean = mean(inlier_keypoints);
-[inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
+[inlier_principal_components, ~] = principalComponentAnalysis(inlier_keypoints);
 % Fit more of the variance of the inliers since we trust the information
 % given by the inliers more.
 num_stddev_for_inlier_pca = num_stddev_for_coarse_pca + 0.3;
@@ -125,7 +114,7 @@ if visualize
     end
     
     % Plot ellipse defined by the principal components
-    show_coarse_ellipse = false;
+    show_coarse_ellipse = true;
     if show_coarse_ellipse
         plotPCAEllipse(...
             ax1, ...
@@ -144,7 +133,7 @@ if visualize
     end
     
     % Show keypoints
-    show_keypoints = false;
+    show_keypoints = true;
     if show_keypoints
         
         scatter(...
