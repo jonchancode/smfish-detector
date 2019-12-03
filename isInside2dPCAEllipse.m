@@ -1,4 +1,4 @@
-function is_inside = isInsidePCAEllipse(xy, center, principal_components)
+function is_inside = isInside2dPCAEllipse(xy, center, principal_components)
 % This function returns whether the point, xy, is inside the ellipse
 % defined by the 'center' and 'principal_components'.
 %
