@@ -23,7 +23,10 @@ xy_centered = xy - center;
 a = norm(principal_components(:,1));
 b = norm(principal_components(:,2));
 
-rotation = [principal_components(:,1) / a, principal_components(:,2) / b];
+% Make the principal components the row-space of the rotation matrix
+rotation = [
+    principal_components(:,1)' / a;
+    principal_components(:,2)' / b];
 xy_centered_rotated = rotation * xy_centered';
 
 % Use the equation of the ellipse to test whether xy is inside.

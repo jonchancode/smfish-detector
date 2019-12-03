@@ -28,7 +28,10 @@ variance_scale = -2 * log(1 - probability);
 
 xy_centered = xy - center;
 
-xy_centered_rotated = evectors * xy_centered';
+% Rotate the xy point to be aligned with the eigen vectors.
+% Thus, need to project onto the eigen vectors.
+% Thus, make the evectors the rows of the rotation matrix.
+xy_centered_rotated = evectors' * xy_centered';
 
 % The boundary of an ellipse is defined x^2/a^2 + y^2/b^2 = 1 where (a, b)
 % define the major and minor axes of the ellipse, and (x, y) is any point.
