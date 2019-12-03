@@ -1,18 +1,11 @@
 function processImage(img_path, save_intermediate_images)
 % Processes one image
 
-%% General ellipse detection
+%% Coarse ellipse detection
 
 % Load the image and convert to single precision floating point image
 byte_img = imread(img_path);
 single_img = im2single(byte_img);
-
-% Histogram analysis
-% figure(2);
-% [pixel_count, gray_levels] = imhist(byte_img, 256);
-% pixel_count(1) = 0;
-% bar(gray_levels, pixel_count);
-
 
 % Run DoH to detect strong blobs and PCA to get a coarse estimate of an
 % ellipse outlining the cell
@@ -20,45 +13,58 @@ covdet_frames = vl_covdet(single_img, 'method', 'Hessian');
 keypoints = covdet_frames(1:2, :)';  % First 2 rows
 keypoint_mean = mean(keypoints);
 [coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
-% Scale the principal components to 2 standard deviations
-num_stddev_for_coarse_pca = 2.1;
+
+%% Remove outlier detections
+
+% Scale the coarse principal components to some threshold which we would
+% consider to be inlier points. Use ~2 standard deviations of the
+% variance PCA fit on the keypoints.
+num_stddev_for_coarse_pca = 2.2;
 coarse_principal_components = num_stddev_for_coarse_pca * coarse_principal_components;
 
-% Detect outlier blobs according to their distance from the ellipse. Throw
-% away any detections beyond a certain threshold.
+% Consider a keypoint outside the ellipse an outlier
 outlier_indices = [];
 for i = 1:size(keypoints, 1)
     keypoint = keypoints(i,:);
-    
-    % Consider the keypoint an inlier if it's inside a slightly larger
-    % ellipse
-    threshold_scale = 1.1;
-    is_inside_inlier_ellipse = isInside2dPCAEllipse(keypoint, keypoint_mean, threshold_scale * coarse_principal_components);
+
+    is_inside_inlier_ellipse = isInside2dPCAEllipse(...
+        keypoint, ...
+        keypoint_mean, ...
+        coarse_principal_components);
     
     if ~is_inside_inlier_ellipse
         outlier_indices = [outlier_indices, i];
     end
 end
 
-% Remove the outliers
+% Create a new list of keypoints without the outliers
 inlier_keypoints = keypoints;
 inlier_keypoints(outlier_indices, :) = [];
 
-% Recompute ellipse with inliers only
+%% ROI refinement with inliers only
+
+% Recompute an ellipse with inliers only
 inlier_keypoints_mean = mean(inlier_keypoints);
 [inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
-num_stddev_for_inlier_pca = 2.4;
+% Fit more of the variance of the inliers since we trust the information
+% given by the inliers more.
+num_stddev_for_inlier_pca = num_stddev_for_coarse_pca + 0.3;
 inlier_principal_components = num_stddev_for_inlier_pca * inlier_principal_components;
 
-%% Flood filling
+%% ROI dilation
 
-% Run MSER to flood fill the regions
-[region_seeds, ~] = vl_mser(byte_img);
+% Run MSER to flood fill the regions, and compute which regions overlap
+% with the inlier ellipse.
+[region_map, xy_of_inlier_region_pixels] = computeMserRegionMapOverlappingEllipse(...
+    byte_img, ...
+    inlier_keypoints_mean, ...
+    inlier_principal_components);
 
-% TODO: Only use regions overlapping with the inlier ellipse, and fit a
-% convex hull using convexhull over the pixels in those selected regions.
+% Create a bounding convex hull around the regions overlapping the inlier
+% ellipse.
+hull_pts = convhull(double(xy_of_inlier_region_pixels));
 
-%% Visualizations of extracted ROIs
+%% Visualizations
 
 % Turn on visualize if 'save_intermediate_images' is desired
 visualize = true || save_intermediate_images;
@@ -167,85 +173,23 @@ if visualize
         % Show the image
         imshow(byte_img);
         
-        % Computes a look-up table image, num_regions_for_pixel, where each
-        % pixel of this image is an integer representing how many
-        % overlapping regions there are for that pixel.
-        %
-        % Note that this forms a sort of "elevation map". Pixels that have
-        % high region overlap can be thought of as "mountain peaks".
-        %
-        % We use the contour function to display a countour map
-        % representing the region boundaries.
-        num_regions_per_pixel = zeros(size(byte_img));
-        indices_of_inlier_region_pixels = containers.Map(...
-            'KeyType', 'int32', ...
-            'ValueType', 'logical');
-        xy_of_inlier_region_pixels = [];
-        for region_seed = region_seeds'
-            % Flood fill the region given by the seed
-            indices_of_pixels_in_filled_region = vl_erfill(byte_img, region_seed);
+        % We use the contour function to display the region_map which will
+        % draw lines around the region boundaries
+        show_contours = true;
+        if show_contours
             
-            % Increment the num_regions_per_pixel to represent that this
-            % set of pixels belongs to one additional region.
-            num_regions_per_pixel(indices_of_pixels_in_filled_region) = ...
-                num_regions_per_pixel(indices_of_pixels_in_filled_region) + 1;
+            [~, figure_handle] = contour(...
+                ax2, ...
+                region_map, ...
+                (0:max(region_map(:))) + .5);
             
-            % Figure out if any pixel in this region is inside the inlier
-            % ellipse
-            is_inside_inlier_ellipse = false;
-            for idx = indices_of_pixels_in_filled_region'
-                % Check if we've already marked this pixel as an inlier
-                % region during the evaluation of a previous, overlapping
-                % region.
-                if indices_of_inlier_region_pixels.isKey(idx)
-                    % The current region is connected to a pixel that is an
-                    % inlier region. Thus, this region must be an inlier
-                    % region.
-                    % Exit this loop.
-                    is_inside_inlier_ellipse = true;
-                    break;
-                end
-                
-                % Otherwise, check if this pixel is inside the inlier
-                % ellipse.
-                [row, col] = ind2sub(size(byte_img), idx);
-                
-                if isInside2dPCAEllipse(...
-                        [col row], ...
-                        inlier_keypoints_mean, ...
-                        inlier_principal_components)
-                    
-                    is_inside_inlier_ellipse = true;
-                    break;
-                end
-                
-            end
-            
-            if is_inside_inlier_ellipse
-                % Add all the pixels in this region to our list
-                for idx = indices_of_pixels_in_filled_region'
-                    
-                    if indices_of_inlier_region_pixels.isKey(idx)
-                        % Skip if we've already recorded this pixel
-                        continue;
-                    end
-                    
-                    % Add the xy position of the pixel
-                    [row, col] = ind2sub(size(byte_img), idx);
-                    xy_of_inlier_region_pixels = [xy_of_inlier_region_pixels; [col row];];
-                    
-                    % Mark that we've seen this pixel now
-                    indices_of_inlier_region_pixels(idx) = true;
-                end
-            end
-            
+            set(figure_handle, 'color', 'y', 'linewidth', 3);
         end
         
         % Plot the convex hull of the inlier pixel regions
         show_convex_hull = true;
         if show_convex_hull
-            hull_pts = convhull(double(xy_of_inlier_region_pixels));
-            
+
             plot(...
                 ax1, ...
                 xy_of_inlier_region_pixels(hull_pts, 1), ...
@@ -257,18 +201,6 @@ if visualize
                 xy_of_inlier_region_pixels(hull_pts, 1), ...
                 xy_of_inlier_region_pixels(hull_pts, 2), ...
                 'c');
-        end
-        
-        % Plot the contours
-        show_contours = true;
-        if show_contours
-            
-            [~, figure_handle] = contour(...
-                ax2, ...
-                num_regions_per_pixel, ...
-                (0:max(num_regions_per_pixel(:))) + .5);
-            
-            set(figure_handle, 'color', 'y', 'linewidth', 3);
         end
         
         % Plot inlier ellipse
