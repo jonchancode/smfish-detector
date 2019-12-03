@@ -21,7 +21,7 @@ keypoints = covdet_frames(1:2, :)';  % First 2 rows
 keypoint_mean = mean(keypoints);
 [coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
 % Scale the principal components to 2 standard deviations
-num_stddev_for_coarse_pca = 2.0;
+num_stddev_for_coarse_pca = 2.1460;
 coarse_principal_components = num_stddev_for_coarse_pca * coarse_principal_components;
 % TODO: Remove this in the future, or make this identical to the number of
 % standard deviations shown above.
@@ -35,8 +35,8 @@ for i = 1:size(keypoints, 1)
     
     % Consider the keypoint an inlier if it's inside a slightly larger
     % ellipse
-    threshold_probability = coarse_ellipse_probability + 0.05;
-    is_inside_inlier_ellipse = isInsideEllipse(keypoint, keypoint_mean, coarse_keypoints_covariance, threshold_probability);
+    threshold_scale = 1.1406;
+    is_inside_inlier_ellipse = isInside2dPCAEllipse(keypoint, keypoint_mean, threshold_scale * coarse_principal_components);
     
     if ~is_inside_inlier_ellipse
         outlier_indices = [outlier_indices, i];
@@ -50,7 +50,7 @@ inlier_keypoints(outlier_indices, :) = [];
 % Recompute ellipse with inliers only
 inlier_keypoints_mean = mean(inlier_keypoints);
 [inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
-num_stddev_for_inlier_pca = 2.4;
+num_stddev_for_inlier_pca = 2.4477;
 inlier_principal_components = num_stddev_for_inlier_pca * inlier_principal_components;
 inlier_ellipse_probability = 0.95;
 
@@ -230,11 +230,10 @@ if visualize
                 % ellipse.
                 [row, col] = ind2sub(size(byte_img), idx);
                 
-                if isInsideEllipse(...
+                if isInside2dPCAEllipse(...
                         [col row], ...
                         inlier_keypoints_mean, ...
-                        inlier_keypoints_covariance, ...
-                        inlier_ellipse_probability)
+                        inlier_principal_components)
                     
                     is_inside_inlier_ellipse = true;
                     break;
@@ -304,7 +303,7 @@ if visualize
                 'g');
             
             plotPCAEllipse(...
-                ax1, ...
+                ax2, ...
                 keypoint_mean, ...
                 inlier_principal_components, ...
                 'm');
