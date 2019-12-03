@@ -26,16 +26,16 @@ keypoint_mean = mean(keypoints);
 % away any detections beyond a certain threshold.
 outlier_indices = [];
 for i = 1:size(keypoints, 1)
-   keypoint = keypoints(i,:);
-   
-   % Consider the keypoint an inlier if it's inside a slightly larger
-   % ellipse
-   threshold_probability = coarse_ellipse_probability + 0.05;
-   is_inside_inlier_ellipse = isInsideEllipse(keypoint, keypoint_mean, coarse_keypoints_covariance, threshold_probability);
-   
-   if ~is_inside_inlier_ellipse
-       outlier_indices = [outlier_indices, i];
-   end
+    keypoint = keypoints(i,:);
+    
+    % Consider the keypoint an inlier if it's inside a slightly larger
+    % ellipse
+    threshold_probability = coarse_ellipse_probability + 0.05;
+    is_inside_inlier_ellipse = isInsideEllipse(keypoint, keypoint_mean, coarse_keypoints_covariance, threshold_probability);
+    
+    if ~is_inside_inlier_ellipse
+        outlier_indices = [outlier_indices, i];
+    end
 end
 
 % Remove the outliers
@@ -59,7 +59,7 @@ inlier_ellipse_probability = 0.95;
 
 % Turn on visualize if 'save_intermediate_images' is desired
 visualize = true || save_intermediate_images;
-if visualize   
+if visualize
     % Use figure 1
     figure_1 = figure(1);
     
@@ -92,7 +92,7 @@ if visualize
         % Show the image
         imshow(rescaled_img);
     end
-   
+    
     % Show the thresholded image
     show_thresholded_image = false;
     if show_thresholded_image
@@ -213,7 +213,7 @@ if visualize
             plot(ax1, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
             plot(ax2, xy_of_inlier_region_pixels(hull_pts, 1), xy_of_inlier_region_pixels(hull_pts, 2), 'c');
         end
-
+        
         % Plot the contours
         show_contours = false;
         if show_contours
@@ -228,20 +228,21 @@ if visualize
         
         hold(ax2, 'off');
         
-       if save_intermediate_images
-           [~, file_name, ~] = fileparts(img_path);
-           saveas(figure_2, sprintf('out\\%s_fig2.png', file_name)); 
-       end
-   end
+        if save_intermediate_images
+            [~, file_name, ~] = fileparts(img_path);
+            saveas(figure_2, sprintf('out\\%s_fig2.png', file_name));
+        end
     end
-    
-    % Use vl_plot
+end
+
+% Use vl_plot
 %     vl_plotframe(frames);
 
-   hold(ax1, 'off');
-   
-   if save_intermediate_images
-       [~, file_name, ~] = fileparts(img_path);
-       saveas(figure_1, sprintf('out\\%s_fig1.png', file_name)); 
-   end
+hold(ax1, 'off');
+
+if save_intermediate_images
+    [~, file_name, ~] = fileparts(img_path);
+    saveas(figure_1, sprintf('out\\%s_fig1.png', file_name));
+end
+
 end
