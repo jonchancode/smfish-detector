@@ -1,6 +1,10 @@
-function [components, covariance, variance_explained] = principalComponentAnalysis(X)
-% Finds principal components of X. Assumes each row of X is a data point,
-% and each column is the dimension of interest.
+function [components, covariance] = principalComponentAnalysis(X)
+% Finds principal components of X. Assumes each row of X is p dimensional
+% data point.
+%
+% Returns 'components', which is a p x p matrix where each column is
+% one of the principal components. The length of each component is 1
+% standard deviation of the variance being 'explained' by that component.
 
 % Find mean
 mean_row = mean(X);
@@ -14,12 +18,13 @@ covariance = (zero_mean_X' * zero_mean_X) / (num_samples - 1);
 % Find principal components of covariance matrix with SVD
 [~, S, V] = svd(zero_mean_X);
 
+% Extract the square matrix (p x p) of singular values
 S = S(1:num_components, 1:num_components);
 
-variance_explained = diag((S * S) / (num_samples - 1));
+% Compute the variance explained by each component 
+variance_explained = (S * S) / (num_samples - 1);
 
-components = V;
-% components(:,1) = components(:,1) * variance_explained(1);
-% components(:,2) = components(:,2) * variance_explained(2);
+% Scale the components by the standard deviation (sqrt(variance)).
+components = V * sqrt(variance_explained);
 
 end

@@ -1,6 +1,6 @@
 function is_inside = isInsideEllipse(xy, center, covariance, probability)
 % This function checks whether a point, xy, is within the ellipse defined
-% by (covariance, center, and probability).
+% by a 2d normal distribution parameterized by (center, covariance, and probability).
 %
 % xy = 2d point we're interested in
 % center = 2d center of the ellipse

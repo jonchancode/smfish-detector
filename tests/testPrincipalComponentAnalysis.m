@@ -1,26 +1,27 @@
 function testPrincipalComponentAnalysis()
 
-% Generate test data
+% Generate random test data with a normal distribution given by
+% 'covariance' and centered around 'offset'
 rng(42);
 X = zeros(50, 2);
 covariance = [[3 1]; [1 2];];
-offset = [3 -2];
 % covariance = eye(2);
+offset = [3 -2];
 
 for i = 1:size(X, 1)
     rand_pt = (covariance * randn(2,1)) + offset';
     X(i,:) = rand_pt';
 end
 
+% Use hard coded test data
 % X = [[2, 1]; [-3, 1]; [2, -4]; [1, -1]; [0, 2]; [-1, 3]; [2, -1];];
 
-
 % Run PCA
-[components, pca_covariance, variance_explained] = principalComponentAnalysis(X)
+[components, pca_covariance] = principalComponentAnalysis(X)
 
 % Verify
 assert(components(:,1)' * components(:,2) == 0, 'Columns of components should be orthogonal');
-assert(variance_explained(1) > variance_explained(2), 'Variances/components should be ordered from largest to smallest');
+assert(norm(components(:,1)) > norm(components(:,2)), 'Variances/components should be ordered from largest to smallest');
 
 % Visualize
 visualize = true;
@@ -38,12 +39,12 @@ if visualize
     
     mean_pt = mean(X);
     mean_X = repmat(mean_pt, 2, 1);
-    scaled_components = components * diag(sqrt(variance_explained));
     quiver(...
+        ax, ...
         mean_X(:,1), ...
         mean_X(:,2), ...
-        scaled_components(1,:)', ...
-        scaled_components(2,:)');
+        components(1,:)', ...
+        components(2,:)');
     
     scatter(ax, X(:,1), X(:,2));
     
@@ -54,13 +55,10 @@ if visualize
         1 - exp(-0.5), ...
         'g');
     
-    waitforbuttonpress;
-    
     plotPCAEllipse(...
         ax, ...
         mean_pt, ...
         components, ...
-        variance_explained, ...
         'r');
     
     hold off;

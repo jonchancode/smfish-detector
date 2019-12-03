@@ -1,9 +1,8 @@
-function plotPCAEllipse(ax, center, principal_components, variance_explained, color)
+function plotPCAEllipse(ax, center, principal_components, color)
 
 t = linspace(0, 2 * pi);
 
-scaled_components = principal_components * diag(sqrt(variance_explained));
-ellipse_boundary_pts = scaled_components * [cos(t(:))'; sin(t(:))'];
+ellipse_boundary_pts = principal_components * [cos(t(:))'; sin(t(:))'];
 
 plot(...
     ax, ...
