@@ -18,9 +18,14 @@ single_img = im2single(byte_img);
 % ellipse outlining the cell
 covdet_frames = vl_covdet(single_img, 'method', 'Hessian');
 keypoints = covdet_frames(1:2, :)';  % First 2 rows
-[coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
-coarse_ellipse_probability = 0.9; % TODO: Remove this in the future.
 keypoint_mean = mean(keypoints);
+[coarse_principal_components, coarse_keypoints_covariance] = principalComponentAnalysis(keypoints);
+% Scale the principal components to 2 standard deviations
+num_stddev_for_coarse_pca = 2.0;
+coarse_principal_components = num_stddev_for_coarse_pca * coarse_principal_components;
+% TODO: Remove this in the future, or make this identical to the number of
+% standard deviations shown above.
+coarse_ellipse_probability = 0.9;
 
 % Detect outlier blobs according to their distance from the ellipse. Throw
 % away any detections beyond a certain threshold.
@@ -43,8 +48,10 @@ inlier_keypoints = keypoints;
 inlier_keypoints(outlier_indices, :) = [];
 
 % Recompute ellipse with inliers only
-[inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
 inlier_keypoints_mean = mean(inlier_keypoints);
+[inlier_principal_components, inlier_keypoints_covariance] = principalComponentAnalysis(inlier_keypoints);
+num_stddev_for_inlier_pca = 2.4;
+inlier_principal_components = num_stddev_for_inlier_pca * inlier_principal_components;
 inlier_ellipse_probability = 0.95;
 
 %% Flood filling
@@ -100,9 +107,9 @@ if visualize
         imshow(thresholded_img);
     end
     
-    % Show principal components
-    show_principal_components = false;
-    if show_principal_components
+    % Show coarse principal components
+    show_coarse_principal_components = false;
+    if show_coarse_principal_components
         mean_matrix = repmat(keypoint_mean, 2, 1);
         
         quiver(...
@@ -117,22 +124,36 @@ if visualize
     % Plot ellipse defined by the principal components
     show_coarse_ellipse = false;
     if show_coarse_ellipse
+        % TODO: Get rid of this
         plotCovarianceEllipse(...
             ax1, ...
             keypoint_mean, ...
             coarse_keypoints_covariance, ...
             coarse_ellipse_probability, ...
             'r');
+        
+        plotPCAEllipse(...
+            ax1, ...
+            keypoint_mean, ...
+            coarse_principal_components, ...
+            'm');
     end
     
     show_inlier_ellipse = true;
     if show_inlier_ellipse
+        % TODO: Get rid of this
         plotCovarianceEllipse(...
             ax1, ...
             inlier_keypoints_mean, ...
             inlier_keypoints_covariance, ...
             inlier_ellipse_probability, ...
             'g');
+        
+        plotPCAEllipse(...
+            ax1, ...
+            keypoint_mean, ...
+            inlier_principal_components, ...
+            'm');
     end
     
     % Show keypoints
@@ -153,7 +174,7 @@ if visualize
     end
     
     % Show MSER regions
-    show_mser_regions = true;
+    show_mser_regions = false;
     if show_mser_regions
         
         % Draw on figure 2
@@ -208,19 +229,19 @@ if visualize
                 % Otherwise, check if this pixel is inside the inlier
                 % ellipse.
                 [row, col] = ind2sub(size(byte_img), idx);
-
+                
                 if isInsideEllipse(...
                         [col row], ...
                         inlier_keypoints_mean, ...
                         inlier_keypoints_covariance, ...
                         inlier_ellipse_probability)
-
+                    
                     is_inside_inlier_ellipse = true;
                     break;
                 end
-
+                
             end
-
+            
             if is_inside_inlier_ellipse
                 % Add all the pixels in this region to our list
                 for idx = indices_of_pixels_in_filled_region'
@@ -238,7 +259,7 @@ if visualize
                     indices_of_inlier_region_pixels(idx) = true;
                 end
             end
-
+            
         end
         
         % Plot the convex hull of the inlier pixel regions
@@ -273,12 +294,20 @@ if visualize
         
         % Plot inlier ellipse
         if show_inlier_ellipse
+            
+            % TODO: Remove this
             plotCovarianceEllipse(...
                 ax2, ...
                 inlier_keypoints_mean, ...
                 inlier_keypoints_covariance, ...
                 inlier_ellipse_probability, ...
                 'g');
+            
+            plotPCAEllipse(...
+                ax1, ...
+                keypoint_mean, ...
+                inlier_principal_components, ...
+                'm');
         end
         
         hold(ax2, 'off');
