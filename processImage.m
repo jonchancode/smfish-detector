@@ -67,6 +67,10 @@ hull_vertex_indices = convhull(double(pixels_of_connected_regions));
 
 %% Count number of keypoints inside convex hull
 
+% Get the xy positions of the hull vertices.
+% hull_vertex_points is N x 2 matrix where each row is one xy pos of a vertex.
+hull_vertex_points = pixels_of_connected_regions(hull_vertex_indices, :);
+
 % Loop through each keypoint and check if it's inside the convex hull.
 num_points_inside_hull = 0;
 num_points_outside_hull = 0;
@@ -74,11 +78,12 @@ for i = 1:size(keypoints, 1)
     
     keypoint = keypoints(i,:);
     
+    % Check if it's inside the hull. Increment the appropriate counters.
     if inpolygon(...
             keypoint(1), ...
             keypoint(2), ...
-            pixels_of_connected_regions(hull_vertex_indices, 1), ...
-            pixels_of_connected_regions(hull_vertex_indices, 2))
+            hull_vertex_points(:,1), ...
+            hull_vertex_points(:,2))
         
         num_points_inside_hull = num_points_inside_hull + 1;
         
@@ -89,7 +94,7 @@ for i = 1:size(keypoints, 1)
     end
 end
 
-% Print to screen the result
+% Print to console the result
 fprintf('Total detections: %d. # dots inside: %d. # dots outside: %d. Image: %s\n', ...
     size(keypoints, 1), ...
     num_points_inside_hull, ...
