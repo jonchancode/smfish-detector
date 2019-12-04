@@ -57,7 +57,44 @@ inlier_principal_components = num_stddev_for_inlier_pca * inlier_principal_compo
 
 % Create a bounding convex hull around the regions connected to the inlier
 % ellipse.
-hull_pts = convhull(double(pixels_of_connected_regions));
+% hull_vertex_indices is a list where each element is the index into the
+% 'pixels_of_connected_regions' list of pixels.
+%
+% Thus, to get the xy position of the i'th vertex, you do:
+% pixels_of_connected_regions(hull_vertex_indices(i))
+hull_vertex_indices = convhull(double(pixels_of_connected_regions));
+
+
+%% Count number of keypoints inside convex hull
+
+% Loop through each keypoint and check if it's inside the convex hull.
+num_points_inside_hull = 0;
+num_points_outside_hull = 0;
+for i = 1:size(keypoints, 1)
+    
+    keypoint = keypoints(i,:);
+    
+    if inpolygon(...
+            keypoint(1), ...
+            keypoint(2), ...
+            pixels_of_connected_regions(hull_vertex_indices, 1), ...
+            pixels_of_connected_regions(hull_vertex_indices, 2))
+        
+        num_points_inside_hull = num_points_inside_hull + 1;
+        
+    else
+        
+        num_points_outside_hull = num_points_outside_hull + 1;
+        
+    end
+end
+
+% Print to screen the result
+fprintf('Total detections: %d. # dots inside: %d. # dots outside: %d. Image: %s\n', ...
+    size(keypoints, 1), ...
+    num_points_inside_hull, ...
+    num_points_outside_hull, ...
+    img_path);
 
 
 %% Visualizations
@@ -77,7 +114,7 @@ if visualize
         inlier_principal_components, ...
         region_map, ...
         pixels_of_connected_regions, ...
-        hull_pts)
+        hull_vertex_indices)
 end
 
 end
