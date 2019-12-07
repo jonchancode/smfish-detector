@@ -64,7 +64,6 @@ inlier_principal_components = num_stddev_for_inlier_pca * inlier_principal_compo
 % pixels_of_connected_regions(hull_vertex_indices(i))
 hull_vertex_indices = convhull(double(pixels_of_connected_regions));
 
-
 %% Count number of keypoints inside convex hull
 
 % Get the xy positions of the hull vertices.

@@ -18,9 +18,13 @@ function [region_map, pixels_of_connected_regions] = computeMserAndFindRegionsCo
 region_map = zeros(size(byte_img));
 pixels_of_connected_regions = [];
 
+% Threshold the image to get rid of general dark noise
+min_pixel_value = 5;
+thresholded_img = max(min_pixel_value, byte_img);
+
 % Run MSER to flood fill the regions. Each region_seed is the index of a
 % pixel that belongs to a region.
-[region_seeds, ~] = vl_mser(byte_img);
+[region_seeds, ~] = vl_mser(thresholded_img);
 
 % Keep a dictionary of pixels we've already counted as an inlier
 indices_of_inlier_region_pixels = containers.Map(...
@@ -32,7 +36,7 @@ indices_of_inlier_region_pixels = containers.Map(...
 % list of pixels in that region.
 for region_seed = region_seeds'
     % Flood fill the region given by the seed
-    indices_of_pixels_in_filled_region = vl_erfill(byte_img, region_seed);
+    indices_of_pixels_in_filled_region = vl_erfill(thresholded_img, region_seed);
     
     % Increment the num_regions_per_pixel to represent that this
     % set of pixels belongs to one additional region.
