@@ -27,7 +27,7 @@ if show_original_image
 end
 
 % Show coarse principal components
-show_coarse_principal_components = true;
+show_coarse_principal_components = false;
 if show_coarse_principal_components
     mean_matrix = repmat(coarse_ellipse_center, 2, 1);
     
@@ -41,7 +41,7 @@ if show_coarse_principal_components
 end
 
 % Plot ellipse defined by the principal components
-show_coarse_ellipse = true;
+show_coarse_ellipse = false;
 if show_coarse_ellipse
     plotPCAEllipse(...
         ax1, ...
@@ -50,7 +50,7 @@ if show_coarse_ellipse
         'r');
 end
 
-show_inlier_ellipse = true;
+show_inlier_ellipse = false;
 if show_inlier_ellipse
     plotPCAEllipse(...
         ax1, ...
@@ -74,6 +74,16 @@ if show_keypoints
         inlier_keypoints(:,1), ...
         inlier_keypoints(:,2), ...
         'g');
+end
+
+% Show Convex hull
+show_convex_hull = true;
+if show_convex_hull
+    plot(...
+        ax1, ...
+        pixels_of_connected_regions(hull_pts, 1), ...
+        pixels_of_connected_regions(hull_pts, 2), ...
+        'c');
 end
 
 % Show MSER regions
@@ -101,18 +111,16 @@ if show_mser_regions
             (0:max(region_map(:))) + .5);
         
         set(figure_handle, 'color', 'y', 'linewidth', 3);
+        
+        figure_3 = figure(3);
+        ax3 = figure_3.CurrentAxes;
+        cla(ax3);
+        surf_plot_handle = surf(ax3, byte_img);
+        set(surf_plot_handle, 'LineStyle', 'none'); % Turn off grid lines on the surface plot. There's too many.
     end
     
     % Plot the convex hull of the inlier pixel regions
-    show_convex_hull = true;
     if show_convex_hull
-        
-        plot(...
-            ax1, ...
-            pixels_of_connected_regions(hull_pts, 1), ...
-            pixels_of_connected_regions(hull_pts, 2), ...
-            'c');
-        
         plot(...
             ax2, ...
             pixels_of_connected_regions(hull_pts, 1), ...

@@ -24,6 +24,15 @@ for i = 3:size(img_files, 1)
     
     % Wait for a click or button press before moving on to next image
     if ~save_intermediate_images
-        waitforbuttonpress;
+        fprintf('Press space to continue\n');
+        user_pressed_space = false;
+        while ~user_pressed_space
+            input('');
+            pressed_key = get(gcf, 'CurrentKey');
+            
+            if strcmp(pressed_key, 'return')
+                user_pressed_space = true;
+            end
+        end
     end
 end
