@@ -1,13 +1,9 @@
-% Process one easy image
-img_path = 'images\cell 19_opn4_enhanced.tif';
-processImage(img_path, false);
-
 % Process all of the images
 img_dir_path = 'images';
 img_files = dir(img_dir_path);
 
 % Whether or not to save the intermediate images
-save_intermediate_images = false;
+save_intermediate_images = true;
 if save_intermediate_images
     mkdir 'out'
 end
