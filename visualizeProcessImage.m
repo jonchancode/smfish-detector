@@ -91,7 +91,7 @@ if show_inlier_ellipse
 end
 
 % Plot the convex hull of the inlier pixel regions
-show_convex_hull = false;
+show_convex_hull = true;
 if show_convex_hull
     plot(...
         ax1, ...
