@@ -13,19 +13,23 @@ function visualizeProcessImage(...
     pixels_of_connected_regions, ...
     hull_pts)
 
+% Ensure imshow doesn't pad the images with whitespace
+iptsetpref('ImshowBorder', 'tight');
+
 % Use figure 1
 figure_1 = figure(1);
 
 % Get the current plotting axes so the future plotting functions can
 % overlay on the same plot.
+% MUST USE gca. TODO: Don't know why I can't use figure_1.CurrentAxes
 ax1 = gca;
-hold(ax1, 'on');
 
 % Show image
-show_original_image = true;
-if show_original_image
-    imshow(single_img);
-end
+imshow(single_img);
+
+% Call hold ***AFTER*** drawing the image, otherwise Matlab pads the figure
+% window.
+hold(ax1, 'on');
 
 % Show keypoints
 show_keypoints = true;
@@ -86,6 +90,16 @@ if show_inlier_ellipse
         'g');
 end
 
+% Plot the convex hull of the inlier pixel regions
+show_convex_hull = false;
+if show_convex_hull
+    plot(...
+        ax1, ...
+        pixels_of_connected_regions(hull_pts, 1), ...
+        pixels_of_connected_regions(hull_pts, 2), ...
+        'c');
+end
+
 % Show MSER regions
 show_mser_regions = true;
 if show_mser_regions
@@ -95,10 +109,13 @@ if show_mser_regions
     
     % Get axes of figure2 so we can do overlays
     ax2 = gca;
-    hold(ax2, 'on');
     
     % Show the image
     imshow(byte_img);
+    
+    % Call hold ***AFTER*** drawing the image, otherwise Matlab pads the 
+    % figure window.
+    hold(ax2, 'on');
     
     % We use the contour function to display the region_map which will
     % draw lines around the region boundaries
@@ -114,15 +131,7 @@ if show_mser_regions
     end
     
     % Plot the convex hull of the inlier pixel regions
-    show_convex_hull = true;
     if show_convex_hull
-        
-        plot(...
-            ax1, ...
-            pixels_of_connected_regions(hull_pts, 1), ...
-            pixels_of_connected_regions(hull_pts, 2), ...
-            'c');
-        
         plot(...
             ax2, ...
             pixels_of_connected_regions(hull_pts, 1), ...
@@ -143,7 +152,10 @@ if show_mser_regions
     
     if save_intermediate_images
         [~, file_name, ~] = fileparts(img_path);
-        saveas(figure_2, sprintf('out\\%s_fig2.png', file_name));
+        ax2_frame = getframe(ax2);
+        imwrite(...
+            ax2_frame.cdata, ...
+            sprintf('out\\%s_fig2.png', file_name));
     end
 end
 
@@ -154,7 +166,10 @@ hold(ax1, 'off');
 
 if save_intermediate_images
     [~, file_name, ~] = fileparts(img_path);
-    saveas(figure_1, sprintf('out\\%s_fig1.png', file_name));
+    ax1_frame = getframe(ax1);
+    imwrite(...
+        ax1_frame.cdata, ...
+        sprintf('out\\%s_fig1.png', file_name));
 end
 
 end
